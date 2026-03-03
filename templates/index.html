@@ -1,0 +1,32 @@
+{% extends 'base.html' %}
+
+{% block content %}
+
+<div class="hero">
+    <h1>Welcome to ClassKit 📚</h1>
+    <p>Your all-in-one school helper for CBSE students</p>
+</div>
+
+<div class="tools-grid">
+    <a href="/timetable" class="tool-card">
+        <h2>📅 Timetable Generator</h2>
+        <p>Create your perfect daily study schedule</p>
+    </a>
+
+    <a href="/flashcards" class="tool-card">
+        <h2>🃏 Flashcard Maker</h2>
+        <p>Create and study flashcards for any subject</p>
+    </a>
+
+    <a href="/timer" class="tool-card">
+        <h2>⏱️ Study Timer</h2>
+        <p>Stay focused with the Pomodoro technique</p>
+    </a>
+
+    <a href="/homework" class="tool-card">
+        <h2>✅ Homework Checklist</h2>
+        <p>Keep track of all your assignments</p>
+    </a>
+</div>
+
+{% endblock %}

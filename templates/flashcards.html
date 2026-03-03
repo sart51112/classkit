@@ -1,0 +1,247 @@
+{% extends 'base.html' %}
+
+{% block content %}
+
+<div class="page-header">
+    <h1>🃏 Flashcard Maker</h1>
+    <p>Create and study flashcards for any subject</p>
+</div>
+
+<div class="timetable-container">
+
+    <!-- ADD CARD SECTION -->
+    <div class="input-section">
+        <h2>Create a New Card</h2>
+        <p style="color:#666; margin-bottom:15px;">✏️ Enter a question and answer, then click Add Card.</p>
+
+        <div style="display:flex; flex-direction:column; gap:10px; margin-bottom:20px;">
+            <input type="text" id="question" placeholder="Question (e.g. What is photosynthesis?)" style="padding:10px; border:1px solid #ddd; border-radius:8px; font-size:15px;">
+            <textarea id="answer" placeholder="Answer (e.g. The process by which plants make food using sunlight)" rows="3" style="padding:10px; border:1px solid #ddd; border-radius:8px; font-size:15px; resize:vertical;"></textarea>
+            <button onclick="addCard()" class="generate-btn" style="width:fit-content;">Add Card</button>
+        </div>
+    </div>
+
+    <!-- STUDY MODE -->
+    <div id="study-section" style="display:none; margin-top:30px;">
+        <h2>Study Mode</h2>
+        <p style="color:#666; margin-bottom:15px;">Click the card to flip it and reveal the answer.</p>
+
+        <div style="text-align:center; margin-bottom:15px;">
+            <span id="card-counter" style="color:#4f46e5; font-weight:bold;"></span>
+        </div>
+
+        <div class="flashcard" onclick="flipCard()" id="flashcard">
+            <div class="flashcard-inner" id="flashcard-inner">
+                <div class="flashcard-front" id="card-front">
+                    <p>Click a card below to start studying!</p>
+                </div>
+                <div class="flashcard-back" id="card-back">
+                    <p></p>
+                </div>
+            </div>
+        </div>
+
+        <div style="display:flex; justify-content:center; gap:15px; margin-top:20px;">
+            <button onclick="prevCard()" class="generate-btn">⬅ Previous</button>
+            <button onclick="nextCard()" class="generate-btn">Next ➡</button>
+        </div>
+    </div>
+
+    <!-- SAVED CARDS LIST -->
+    <div style="margin-top:30px;">
+        <h2>Your Saved Cards <span id="card-count" style="color:#4f46e5;">({{ cards|length }})</span></h2>
+        <p style="color:#666; margin-bottom:15px;">Click any card to study from it.</p>
+
+        <div id="cards-list">
+            {% if cards %}
+                {% for card in cards %}
+                <div class="saved-card" id="saved-{{ loop.index0 }}">
+                    <div class="saved-card-content" onclick="studyFrom({{ loop.index0 }})">
+                        <strong>Q: {{ card.question }}</strong>
+                        <p style="color:#666; margin-top:5px;">A: {{ card.answer }}</p>
+                    </div>
+                    <button onclick="deleteCard({{ loop.index0 }})" class="clear-btn" style="padding:5px 12px; font-size:13px;">✕</button>
+                </div>
+                {% endfor %}
+            {% else %}
+                <p id="no-cards-msg" style="color:#888;">No cards yet — add your first one above!</p>
+            {% endif %}
+        </div>
+    </div>
+
+</div>
+
+<style>
+.flashcard {
+    width: 100%;
+    max-width: 600px;
+    height: 200px;
+    margin: 0 auto;
+    perspective: 1000px;
+    cursor: pointer;
+}
+
+.flashcard-inner {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    transition: transform 0.6s;
+    transform-style: preserve-3d;
+}
+
+.flashcard.flipped .flashcard-inner {
+    transform: rotateY(180deg);
+}
+
+.flashcard-front, .flashcard-back {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    backface-visibility: hidden;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    text-align: center;
+    font-size: 18px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+}
+
+.flashcard-front {
+    background: #4f46e5;
+    color: white;
+}
+
+.flashcard-back {
+    background: #10b981;
+    color: white;
+    transform: rotateY(180deg);
+}
+
+.saved-card {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 10px;
+    padding: 15px;
+    margin-bottom: 10px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+}
+
+.saved-card-content {
+    cursor: pointer;
+    flex: 1;
+}
+
+.saved-card-content:hover {
+    color: #4f46e5;
+}
+</style>
+
+<script>
+    let cards = {{ cards | tojson }};
+    let currentIndex = 0;
+
+    function addCard() {
+        const question = document.getElementById('question').value.trim();
+        const answer = document.getElementById('answer').value.trim();
+
+        if (!question || !answer) {
+            alert('Please fill in both question and answer!');
+            return;
+        }
+
+        fetch('/flashcards/add', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ question, answer })
+        })
+        .then(res => res.json())
+        .then(data => {
+            cards = data.cards;
+            document.getElementById('question').value = '';
+            document.getElementById('answer').value = '';
+            updateCardsList();
+            updateStudySection();
+        });
+    }
+
+    function deleteCard(index) {
+        fetch(`/flashcards/delete/${index}`, { method: 'POST' })
+        .then(res => res.json())
+        .then(data => {
+            cards = data.cards;
+            if (currentIndex >= cards.length) currentIndex = 0;
+            updateCardsList();
+            updateStudySection();
+        });
+    }
+
+    function updateCardsList() {
+        const list = document.getElementById('cards-list');
+        const count = document.getElementById('card-count');
+        count.textContent = `(${cards.length})`;
+
+        if (cards.length === 0) {
+            list.innerHTML = '<p style="color:#888;">No cards yet — add your first one above!</p>';
+            return;
+        }
+
+        list.innerHTML = cards.map((card, i) => `
+            <div class="saved-card">
+                <div class="saved-card-content" onclick="studyFrom(${i})">
+                    <strong>Q: ${card.question}</strong>
+                    <p style="color:#666; margin-top:5px;">A: ${card.answer}</p>
+                </div>
+                <button onclick="deleteCard(${i})" class="clear-btn" style="padding:5px 12px; font-size:13px;">✕</button>
+            </div>
+        `).join('');
+    }
+
+    function updateStudySection() {
+        const section = document.getElementById('study-section');
+        if (cards.length > 0) {
+            section.style.display = 'block';
+            showCard(currentIndex);
+        } else {
+            section.style.display = 'none';
+        }
+    }
+
+    function showCard(index) {
+        if (cards.length === 0) return;
+        const card = cards[index];
+        document.getElementById('card-front').innerHTML = `<p>${card.question}</p>`;
+        document.getElementById('card-back').innerHTML = `<p>${card.answer}</p>`;
+        document.getElementById('card-counter').textContent = `Card ${index + 1} of ${cards.length}`;
+        document.getElementById('flashcard').classList.remove('flipped');
+    }
+
+    function flipCard() {
+        document.getElementById('flashcard').classList.toggle('flipped');
+    }
+
+    function nextCard() {
+        currentIndex = (currentIndex + 1) % cards.length;
+        showCard(currentIndex);
+    }
+
+    function prevCard() {
+        currentIndex = (currentIndex - 1 + cards.length) % cards.length;
+        showCard(currentIndex);
+    }
+
+    function studyFrom(index) {
+        currentIndex = index;
+        updateStudySection();
+        document.getElementById('study-section').scrollIntoView({ behavior: 'smooth' });
+    }
+
+    // Init
+    if (cards.length > 0) updateStudySection();
+</script>
+
+{% endblock %}

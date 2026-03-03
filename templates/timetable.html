@@ -1,0 +1,129 @@
+{% extends 'base.html' %}
+
+{% block content %}
+
+<div class="page-header">
+    <h1>📅 Daily Timetable Generator</h1>
+    <p>Create your perfect study schedule</p>
+</div>
+
+<div class="timetable-container">
+    <div class="input-section">
+        <h2>Add Your Subjects</h2>
+        <p style="color:#666; margin-bottom:15px;">
+            ✏️ Enter <strong>one subject at a time</strong> with its start and end time, then click Add. Repeat for each subject.
+        </p>
+
+        <div class="input-row">
+            <input type="text" id="subject" placeholder="Subject (e.g. Maths)">
+            <input type="time" id="start-time">
+            <input type="time" id="end-time">
+            <button onclick="addSubject()">Add</button>
+        </div>
+
+        <div class="day-selector">
+            <p>Select Days:</p>
+            <label><input type="checkbox" value="Monday" checked> Monday</label>
+            <label><input type="checkbox" value="Tuesday" checked> Tuesday</label>
+            <label><input type="checkbox" value="Wednesday" checked> Wednesday</label>
+            <label><input type="checkbox" value="Thursday" checked> Thursday</label>
+            <label><input type="checkbox" value="Friday" checked> Friday</label>
+            <label><input type="checkbox" value="Saturday"> Saturday</label>
+        </div>
+
+        <button onclick="generateTimetable()" class="generate-btn">Generate Timetable</button>
+        <button onclick="clearAll()" class="clear-btn">Clear All</button>
+    </div>
+
+    <div class="subjects-list" id="subjects-list">
+        <h2>Added Subjects</h2>
+        <p id="empty-msg">No subjects added yet</p>
+    </div>
+
+    <div class="timetable-output" id="timetable-output"></div>
+</div>
+
+<script>
+    let subjects = [];
+
+    function addSubject() {
+        const subject = document.getElementById('subject').value;
+        const start = document.getElementById('start-time').value;
+        const end = document.getElementById('end-time').value;
+
+        if (!subject || !start || !end) {
+            alert('Please fill in all fields! Enter one subject, a start time, and an end time.');
+            return;
+        }
+
+        subjects.push({ subject, start, end });
+        document.getElementById('subject').value = '';
+        document.getElementById('start-time').value = '';
+        document.getElementById('end-time').value = '';
+
+        updateSubjectsList();
+    }
+
+    function updateSubjectsList() {
+        const list = document.getElementById('subjects-list');
+        const emptyMsg = document.getElementById('empty-msg');
+
+        emptyMsg.style.display = subjects.length === 0 ? 'block' : 'none';
+
+        const existing = list.querySelectorAll('.subject-tag');
+        existing.forEach(el => el.remove());
+
+        subjects.forEach((s, i) => {
+            const tag = document.createElement('div');
+            tag.className = 'subject-tag';
+            tag.innerHTML = `${s.subject} (${s.start} - ${s.end}) <span onclick="removeSubject(${i})">✕</span>`;
+            list.appendChild(tag);
+        });
+    }
+
+    function removeSubject(index) {
+        subjects.splice(index, 1);
+        updateSubjectsList();
+    }
+
+    function generateTimetable() {
+        if (subjects.length === 0) {
+            alert('Please add at least one subject first!');
+            return;
+        }
+
+        const days = [...document.querySelectorAll('.day-selector input:checked')].map(d => d.value);
+
+        if (days.length === 0) {
+            alert('Please select at least one day!');
+            return;
+        }
+
+        let html = '<h2>Your Timetable</h2><div class="table-wrapper"><table><thead><tr><th>Time</th>';
+        days.forEach(day => html += `<th>${day}</th>`);
+        html += '</tr></thead><tbody>';
+
+        subjects.forEach(s => {
+            html += `<tr><td>${s.start} - ${s.end}</td>`;
+            days.forEach(() => html += `<td>${s.subject}</td>`);
+            html += '</tr>';
+        });
+
+        html += '</tbody></table></div>';
+        html += '<button onclick="printTimetable()" class="print-btn">🖨️ Print Timetable</button>';
+
+        document.getElementById('timetable-output').innerHTML = html;
+    }
+
+    function clearAll() {
+        subjects = [];
+        updateSubjectsList();
+        document.getElementById('timetable-output').innerHTML = '';
+    }
+
+    function printTimetable() {
+        window.print();
+    }
+</script>
+
+{% endblock %}

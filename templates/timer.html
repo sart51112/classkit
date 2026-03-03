@@ -1,0 +1,140 @@
+{% extends 'base.html' %}
+
+{% block content %}
+
+<div class="page-header">
+    <h1>⏱️ Study Timer</h1>
+    <p>Stay focused with the Pomodoro technique</p>
+</div>
+
+<div class="timetable-container" style="max-width:600px; margin:0 auto;">
+
+    <!-- MODE SELECTOR -->
+    <div style="display:flex; gap:10px; margin-bottom:30px; justify-content:center;">
+        <button onclick="setMode(25, 'Study Time')" class="generate-btn" id="btn-study">📚 Study (25 min)</button>
+        <button onclick="setMode(5, 'Short Break')" class="clear-btn" id="btn-short">☕ Short Break (5 min)</button>
+        <button onclick="setMode(15, 'Long Break')" class="clear-btn" id="btn-long">🛌 Long Break (15 min)</button>
+    </div>
+
+    <!-- TIMER DISPLAY -->
+    <div style="text-align:center; margin-bottom:30px;">
+        <div id="mode-label" style="font-size:20px; color:#666; margin-bottom:10px;">Study Time</div>
+        <div id="timer-display" style="font-size:96px; font-weight:bold; color:#4f46e5; letter-spacing:4px;">25:00</div>
+        <div id="session-count" style="color:#888; margin-top:10px;">Sessions completed: 0</div>
+    </div>
+
+    <!-- CONTROLS -->
+    <div style="display:flex; gap:15px; justify-content:center; margin-bottom:30px;">
+        <button onclick="startTimer()" class="generate-btn" id="btn-start" style="font-size:18px; padding:15px 35px;">▶ Start</button>
+        <button onclick="pauseTimer()" class="clear-btn" id="btn-pause" style="font-size:18px; padding:15px 35px;" disabled>⏸ Pause</button>
+        <button onclick="resetTimer()" style="font-size:18px; padding:15px 35px; background:#6b7280; color:white; border:none; border-radius:8px; cursor:pointer;">↺ Reset</button>
+    </div>
+
+    <!-- PROGRESS BAR -->
+    <div style="background:#e5e7eb; border-radius:999px; height:12px; overflow:hidden;">
+        <div id="progress-bar" style="background:#4f46e5; height:100%; width:100%; transition:width 1s linear; border-radius:999px;"></div>
+    </div>
+
+    <!-- HISTORY -->
+    <div style="margin-top:30px;">
+        <h2>Today's Sessions</h2>
+        <div id="history-list" style="margin-top:10px;">
+            <p style="color:#888;">No sessions completed yet — start studying!</p>
+        </div>
+    </div>
+
+</div>
+
+<script>
+    let totalSeconds = 25 * 60;
+    let remainingSeconds = totalSeconds;
+    let interval = null;
+    let sessions = 0;
+    let history = [];
+    let currentMode = 'Study Time';
+
+    function setMode(minutes, label) {
+        clearInterval(interval);
+        interval = null;
+        totalSeconds = minutes * 60;
+        remainingSeconds = totalSeconds;
+        currentMode = label;
+        document.getElementById('mode-label').textContent = label;
+        document.getElementById('timer-display').style.color = minutes === 25 ? '#4f46e5' : '#10b981';
+        document.getElementById('btn-start').disabled = false;
+        document.getElementById('btn-pause').disabled = true;
+        updateDisplay();
+        updateProgress();
+    }
+
+    function startTimer() {
+        if (interval) return;
+        document.getElementById('btn-start').disabled = true;
+        document.getElementById('btn-pause').disabled = false;
+
+        interval = setInterval(() => {
+            remainingSeconds--;
+            updateDisplay();
+            updateProgress();
+
+            if (remainingSeconds <= 0) {
+                clearInterval(interval);
+                interval = null;
+                if (currentMode === 'Study Time') {
+                    sessions++;
+                    document.getElementById('session-count').textContent = `Sessions completed: ${sessions}`;
+                    const now = new Date();
+                    history.unshift(`✅ Study session completed at ${now.getHours()}:${String(now.getMinutes()).padStart(2,'0')}`);
+                    updateHistory();
+                }
+                alert(`${currentMode} finished! 🎉`);
+                document.getElementById('btn-start').disabled = false;
+                document.getElementById('btn-pause').disabled = true;
+            }
+        }, 1000);
+    }
+
+    function pauseTimer() {
+        clearInterval(interval);
+        interval = null;
+        document.getElementById('btn-start').disabled = false;
+        document.getElementById('btn-pause').disabled = true;
+    }
+
+    function resetTimer() {
+        clearInterval(interval);
+        interval = null;
+        remainingSeconds = totalSeconds;
+        document.getElementById('btn-start').disabled = false;
+        document.getElementById('btn-pause').disabled = true;
+        updateDisplay();
+        updateProgress();
+    }
+
+    function updateDisplay() {
+        const mins = Math.floor(remainingSeconds / 60);
+        const secs = remainingSeconds % 60;
+        document.getElementById('timer-display').textContent =
+            `${String(mins).padStart(2,'0')}:${String(secs).padStart(2,'0')}`;
+    }
+
+    function updateProgress() {
+        const pct = (remainingSeconds / totalSeconds) * 100;
+        document.getElementById('progress-bar').style.width = `${pct}%`;
+    }
+
+    function updateHistory() {
+        const list = document.getElementById('history-list');
+        if (history.length === 0) {
+            list.innerHTML = '<p style="color:#888;">No sessions completed yet — start studying!</p>';
+            return;
+        }
+        list.innerHTML = history.map(h => `
+            <div style="background:#f5f7ff; border-radius:8px; padding:10px 15px; margin-bottom:8px; color:#4f46e5;">
+                ${h}
+            </div>
+        `).join('');
+    }
+</script>
+
+{% endblock %}
